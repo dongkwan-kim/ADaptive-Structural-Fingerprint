@@ -1,4 +1,3 @@
-
 import numpy as np
 import pickle as pkl
 import networkx as nx
@@ -8,11 +7,13 @@ import sys
 import torch
 import pickle
 
+
 def sample_mask(idx, l):
     """Create mask."""
     mask = np.zeros(l)
     mask[idx] = 1
     return np.array(mask, dtype=np.bool)
+
 
 def preprocess_features(features):
     """Row-normalize feature matrix and convert to tuple representation"""
@@ -23,8 +24,10 @@ def preprocess_features(features):
     features = r_mat_inv.dot(features)
     return features.todense(), sparse_to_tuple(features)
 
+
 def sparse_to_tuple(sparse_mx):
     """Convert sparse matrix to tuple representation."""
+
     def to_tuple(mx):
         if not sp.isspmatrix_coo(mx):
             mx = mx.tocoo()
@@ -55,7 +58,6 @@ def encode_onehot(labels):
     classes_dict = {c: np.identity(len(classes))[i, :] for i, c in enumerate(classes)}
     labels_onehot = np.array(list(map(classes_dict.get, labels)), dtype=np.int32)
     return labels_onehot
-
 
 
 def structural_interaction(ri_index, ri_all, g):
@@ -99,9 +101,8 @@ def structural_interaction(ri_index, ri_all, g):
     return g
 
 
-
 def load_data(dataset_str):
-      # """Load data."""
+    # """Load data."""
     names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
     objects = []
     for i in range(len(names)):
@@ -116,12 +117,12 @@ def load_data(dataset_str):
     test_idx_range = np.sort(test_idx_reorder)
 
     if dataset_str == 'citeseer':
-        test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder)+1)
+        test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder) + 1)
         tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))
-        tx_extended[test_idx_range-min(test_idx_range), :] = tx
+        tx_extended[test_idx_range - min(test_idx_range), :] = tx
         tx = tx_extended
         ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))
-        ty_extended[test_idx_range-min(test_idx_range), :] = ty
+        ty_extended[test_idx_range - min(test_idx_range), :] = ty
         ty = ty_extended
 
     features = sp.vstack((allx, tx)).tolil()
@@ -143,7 +144,7 @@ def load_data(dataset_str):
     y_train[train_mask, :] = labels[train_mask, :]
     y_val[val_mask, :] = labels[val_mask, :]
     y_test[test_mask, :] = labels[test_mask, :]
-    adj=adj.astype(np.float32)
+    adj = adj.astype(np.float32)
     adj_ad1 = adj
     adj_sum_ad = np.sum(adj_ad1, axis=0)
     adj_sum_ad = np.asarray(adj_sum_ad)
@@ -156,31 +157,30 @@ def load_data(dataset_str):
     adj_delta = adj
     # caculate n-hop neighbors
     G = nx.DiGraph()
-    inf= pickle.load(open('adj_citeseer.pkl', 'rb'))
+    inf = pickle.load(open('adj_citeseer.pkl', 'rb'))
     for i in range(len(inf)):
         for j in range(len(inf[i])):
-          G.add_edge(i, inf[i][j], weight=1)
+            G.add_edge(i, inf[i][j], weight=1)
     for i in range(3312):
-          for j in range(3312):
-              try:
-                  rs = nx.astar_path_length \
-                          (
-                          G,
-                          i,
-                          j,
-                      )
-              except nx.NetworkXNoPath:
-                 rs = 0
-              if rs == 0:
-                  length = 0
-              else:
-                  # print(rs)
-                  length = len(rs)
-              adj_delta[i][j] = length
+        for j in range(3312):
+            try:
+                rs = nx.astar_path_length \
+                        (
+                        G,
+                        i,
+                        j,
+                    )
+            except nx.NetworkXNoPath:
+                rs = 0
+            if rs == 0:
+                length = 0
+            else:
+                # print(rs)
+                length = len(rs)
+            adj_delta[i][j] = length
     a = open("dijskra_citeseer.pkl", 'wb')
     pickle.dump(adj_delta, a)
-   #######
-
+    #######
 
     fw = open('ri_index_c_0.5_citeseer_highorder_1_x_abs.pkl', 'rb')
     ri_index = pickle.load(fw)
@@ -196,7 +196,7 @@ def load_data(dataset_str):
     idx_train = torch.LongTensor(idx_train)
     idx_val = torch.LongTensor(idx_val)
     idx_test = torch.LongTensor(idx_test)
-    return adj, features,idx_train, idx_val, idx_test, train_mask, val_mask, test_mask,labels,adj_delta
+    return adj, features, idx_train, idx_val, idx_test, train_mask, val_mask, test_mask, labels, adj_delta
 
 
 def normalize_adj(mx):
@@ -223,4 +223,3 @@ def accuracy(output, labels):
     correct = preds.eq(labels).double()
     correct = correct.sum()
     return correct / len(labels)
-

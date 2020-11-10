@@ -38,6 +38,7 @@ torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
+
 def preprocess_features(features):
     """Row-normalize feature matrix and convert to tuple representation"""
     rowsum = np.array(features.sum(1))
@@ -50,6 +51,7 @@ def preprocess_features(features):
 
 def sparse_to_tuple(sparse_mx):
     """Convert sparse matrix to tuple representation."""
+
     def to_tuple(mx):
         if not sp.isspmatrix_coo(mx):
             mx = mx.tocoo()
@@ -65,59 +67,62 @@ def sparse_to_tuple(sparse_mx):
         sparse_mx = to_tuple(sparse_mx)
 
     return sparse_mx
-# Load data
-adj, features,  idx_train, idx_val, idx_test, train_mask, val_mask, test_mask,labels ,adj_ad= load_data("citeseer")
-features, spars = preprocess_features(features)
-features=np.array(features)
-features=scipy.sparse.csr_matrix(features)
 
-features=features.astype(np.float32)
+
+# Load data
+adj, features, idx_train, idx_val, idx_test, train_mask, val_mask, test_mask, labels, adj_ad = load_data("citeseer")
+features, spars = preprocess_features(features)
+features = np.array(features)
+features = scipy.sparse.csr_matrix(features)
+
+features = features.astype(np.float32)
 features = torch.FloatTensor(features.todense())
 
 if args.sparse:
-    model =  RWR_process(nfeat=features.shape[1],
-                nhid=args.hidden,
-                nclass=int(labels.max()) + 1,
-                dropout=args.dropout,
-                nheads=args.nb_heads,
-                alpha=args.alpha)
+    model = RWR_process(nfeat=features.shape[1],
+                        nhid=args.hidden,
+                        nclass=int(labels.max()) + 1,
+                        dropout=args.dropout,
+                        nheads=args.nb_heads,
+                        alpha=args.alpha)
 else:
     model = ADSF(nfeat=features.shape[1],
-                nhid=args.hidden, 
-                nclass=int(labels.max()) + 1, 
-                dropout=args.dropout, 
-                nheads=args.nb_heads, 
-                alpha=args.alpha,adj_ad=adj_ad)
-optimizer = optim.Adam(model.parameters(), 
-                       lr=args.lr, 
+                 nhid=args.hidden,
+                 nclass=int(labels.max()) + 1,
+                 dropout=args.dropout,
+                 nheads=args.nb_heads,
+                 alpha=args.alpha, adj_ad=adj_ad)
+optimizer = optim.Adam(model.parameters(),
+                       lr=args.lr,
                        weight_decay=args.weight_decay)
 ###################################使用cuda############################################
 if args.cuda:
-     model.cuda()
-     features = features.cuda()
-     adj = adj.cuda()
-     adj_ad = adj_ad.cuda()
-     labels = labels.cuda()
-     idx_train = idx_train.cuda()
-     idx_val = idx_val.cuda()
-     idx_test = idx_test.cuda()
+    model.cuda()
+    features = features.cuda()
+    adj = adj.cuda()
+    adj_ad = adj_ad.cuda()
+    labels = labels.cuda()
+    idx_train = idx_train.cuda()
+    idx_val = idx_val.cuda()
+    idx_test = idx_test.cuda()
 features, adj, labels = Variable(features), Variable(adj), Variable(labels)
 
 
 def compute_test(epoch):
     model.eval()
-    output = model(features, adj,adj_ad)
+    output = model(features, adj, adj_ad)
     loss_test = F.nll_loss(output[idx_test], labels[idx_test])
     acc_test = accuracy(output[idx_test], labels[idx_test])
     print(
-          'loss_test: {:.4f}'.format(loss_test.data.item()),
-          'acc_test: {:.4f}'.format(acc_test.data.item()))
+        'loss_test: {:.4f}'.format(loss_test.data.item()),
+        'acc_test: {:.4f}'.format(acc_test.data.item()))
+
 
 def train(epoch):
     t = time.time()
     model.train()
     optimizer.zero_grad()
-    output = model(features, adj,adj_ad)
+    output = model(features, adj, adj_ad)
     loss_train = F.nll_loss(output[idx_train], labels[idx_train])
     acc_train = accuracy(output[idx_train], labels[idx_train])
     loss_train.backward()
@@ -127,16 +132,17 @@ def train(epoch):
         # Evaluate validation set performance separately,
         # deactivates dropout during validation run.
         model.eval()
-        output = model(features, adj,adj_ad)
-    
+        output = model(features, adj, adj_ad)
+
     loss_val = F.nll_loss(output[idx_val], labels[idx_val])
     acc_val = accuracy(output[idx_val], labels[idx_val])
-    print('Epoch: {:04d}'.format(epoch+1),
+    print('Epoch: {:04d}'.format(epoch + 1),
           'loss_train: {:.4f}'.format(loss_train.data.item()),
           'acc_train: {:.4f}'.format(acc_train.data.item()),
           'time: {:.4f}s'.format(time.time() - t))
-    
+
     return loss_val.data.item()
+
 
 # Train model
 t_total = time.time()
@@ -174,5 +180,3 @@ print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 # Restore best model
 print('Loading {}th epoch'.format(best_epoch))
 model.load_state_dict(torch.load('{}.pkl'.format(best_epoch)))
-
-
