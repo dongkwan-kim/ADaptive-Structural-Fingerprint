@@ -17,7 +17,7 @@ from models import ADSF, RWR_process
 
 # Training settings
 parser = argparse.ArgumentParser()
-parser.add_argument('--no-cuda', action='store_true', default=False, help='Disables CUDA training.')
+parser.add_argument('--no-cuda', action='store_true', default=True, help='Disables CUDA training.')
 parser.add_argument('--fastmode', action='store_true', default=False, help='Validate during training pass.')
 parser.add_argument('--seed', type=int, default=72, help='Random seed.')
 parser.add_argument('--epochs', type=int, default=1000, help='Number of epochs to train.')
